@@ -1,0 +1,205 @@
+// Prisma Schema for AI Stack Hub
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===== 用户 =====
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String?
+  avatar       String?
+  role         String   @default("user") // "user" | "admin"
+  savedTools      SavedTool[]
+  savedWorkflows  SavedWorkflow[]
+  createdWorkflows Workflow[] @relation("WorkflowCreator")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model SavedTool {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  toolId   String   @map("tool_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tool      Tool     @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, toolId])
+  @@map("saved_tools")
+}
+
+model SavedWorkflow {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  workflowId String   @map("workflow_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, workflowId])
+  @@map("saved_workflows")
+}
+
+// ===== 工具 =====
+model Tool {
+  id           String        @id @default(cuid())
+  name         String        @unique
+  slug         String        @unique
+  description  String
+  logo         String?
+  website      String?
+  pricing      String?       // "free" | "freemium" | "paid" | "subscription"
+  price        Decimal?      @db.Decimal(10, 2)
+  rating       Decimal?      @db.Decimal(2, 1)
+  categories   String[]      // ["writing", "image", "video", "coding", "marketing"]
+  capabilities ToolCapability[]
+  relationsAsSource ToolRelation[] @relation("ToolRelationSource")
+  relationsAsTarget ToolRelation[] @relation("ToolRelationTarget")
+  workflows    WorkflowTool[]
+  articles     ArticleTool[]
+  savedBy      SavedTool[]
+  featured     Boolean @default(false)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([categories])
+  @@index([featured])
+  @@map("tools")
+}
+
+model ToolCapability {
+  id          String   @id @default(cuid())
+  name        String   @unique // "writing", "coding", "image-generation", etc.
+  description String?
+  tools       Tool[]
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("tool_capabilities")
+}
+
+model ToolRelation {
+  id            String   @id @default(cuid())
+  sourceToolId  String   @map("source_tool_id")
+  targetToolId  String   @map("target_tool_id")
+  relationType  String   // "alternative" | "complement" | "combo"
+  strength      Int      @default(1) // 关系强度 1-10
+  sourceTool    Tool     @relation("ToolRelationSource", fields: [sourceToolId], references: [id], onDelete: Cascade)
+  targetTool    Tool     @relation("ToolRelationTarget", fields: [targetToolId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@unique([sourceToolId, targetToolId, relationType])
+  @@index([sourceToolId])
+  @@index([targetToolId])
+  @@map("tool_relations")
+}
+
+// ===== 任务 =====
+model Task {
+  id           String     @id @default(cuid())
+  title        String
+  slug         String     @unique
+  description  String?
+  difficulty   String     @default("medium") // "easy" | "medium" | "hard"
+  category     String     // "content" | "business" | "design" | "automation" | "coding"
+  output       String?    // 预期输出描述
+  toolCount    Int        @default(0) @map("tool_count")
+  icon         String?    // emoji or icon name
+  workflows    Workflow[]
+  featured     Boolean    @default(false)
+  sortOrder    Int        @default(0) @map("sort_order")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@index([featured])
+  @@map("tasks")
+}
+
+// ===== 工作流 =====
+model Workflow {
+  id              String         @id @default(cuid())
+  name            String
+  slug            String         @unique
+  description     String?
+  taskId          String?        @map("task_id")
+  task            Task?          @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  nodes           Json           // React Flow 节点配置
+  edges           Json           // React Flow 边配置
+  tools           WorkflowTool[]
+  estimatedCost   Decimal?       @db.Decimal(10, 2) @map("estimated_cost")
+  estimatedTime   Int?          // 分钟 @map("estimated_time")
+  timeSavedPct    Int?          @map("time_saved_pct") // 时间节省百分比
+  isTemplate      Boolean        @default(false) @map("is_template")
+  isPublic        Boolean        @default(true) @map("is_public")
+  createdBy       String?       @map("created_by") // 用户ID 或 "system"
+  creator         User?          @relation("WorkflowCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  savedBy         SavedWorkflow[]
+  articles        Article[]
+  featured        Boolean         @default(false)
+  sortOrder       Int             @default(0) @map("sort_order")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  @@index([isPublic])
+  @@index([featured])
+  @@map("workflows")
+}
+
+model WorkflowTool {
+  id          String   @id @default(cuid())
+  workflowId  String   @map("workflow_id")
+  toolId      String   @map("tool_id")
+  order       Int      @default(0) // 工具在工作流中的顺序
+  workflow    Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  tool        Tool     @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, toolId])
+  @@map("workflow_tools")
+}
+
+// ===== 内容文章 =====
+model Article {
+  id          String     @id @default(cuid())
+  title       String
+  slug        String     @unique
+  content     String     // Markdown 或 HTML
+  excerpt     String?    // 摘要
+  category    String     // "comparison" | "guide" | "workflow" | "review"
+  tags        String[]
+  workflowId  String?    @map("workflow_id")
+  workflow    Workflow?  @relation(fields: [workflowId], references: [id], onDelete: SetNull)
+  tools       ArticleTool[]
+  published   Boolean    @default(false)
+  featured     Boolean    @default(false)
+  viewCount   Int        @default(0) @map("view_count")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  publishedAt DateTime?  @map("published_at")
+
+  @@index([category])
+  @@index([published])
+  @@index([featured])
+  @@map("articles")
+}
+
+model ArticleTool {
+  id        String   @id @default(cuid())
+  articleId String   @map("article_id")
+  toolId    String   @map("tool_id")
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tool      Tool     @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, toolId])
+  @@map("article_tools")
+}

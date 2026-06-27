@@ -1,0 +1,48 @@
+{
+  "name": "ai-stack-hub-server",
+  "version": "0.1.0",
+  "description": "AI Stack Hub - Server API (Express + Prisma + PostgreSQL)",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "nodemon --exec ts-node --project tsconfig.json src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio",
+    "lint": "eslint src --ext .ts"
+  },
+  "keywords": [
+    "ai",
+    "tools",
+    "workflow"
+  ],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "bcrypt": "^5",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2",
+    "dotenv": "^16",
+    "express": "^4",
+    "helmet": "^8",
+    "jsonwebtoken": "^9",
+    "morgan": "^1"
+  },
+  "devDependencies": {
+    "@prisma/client": "^6.19.3",
+    "@types/bcrypt": "^5",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2",
+    "@types/express": "^5",
+    "@types/jsonwebtoken": "^9",
+    "@types/morgan": "^1",
+    "@types/node": "^20",
+    "nodemon": "^3",
+    "prisma": "^6.19.3",
+    "ts-node": "^10",
+    "typescript": "^5"
+  }
+}
