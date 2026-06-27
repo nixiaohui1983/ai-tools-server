@@ -1,0 +1,53 @@
+# ============================================
+# AI Stack Hub — Render Blueprint
+# ============================================
+
+services:
+  - type: web
+    name: ai-stack-hub-api
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: |
+      npm install
+      npx prisma generate
+      npm run build
+      npx prisma migrate deploy
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+
+      # ======== Database ========
+      # 方式1: 使用 Render PostgreSQL (推荐)
+      # 在 Render Dashboard 创建 PostgreSQL 后，
+      # DATABASE_URL 会自动注入 (Internal Database URL)
+      #
+      # 方式2: 使用外部 PostgreSQL (如 Supabase)
+      # 取消下面注释并手动填入连接字符串
+      # - key: DATABASE_URL
+      #   sync: false
+      #   value: "postgresql://user:password@host:5432/ai_stack_hub?schema=public"
+
+      # ======== Auth ========
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: "7d"
+
+      # ======== CORS ========
+      # 部署后替换为你的前端实际域名
+      - key: CORS_ORIGIN
+        value: "https://ai-tools.vercel.app,https://ai-tools-admin.vercel.app"
+
+# ============================================
+# 可选: 使用 Render 托管 PostgreSQL
+# 取消下面注释即可自动创建数据库实例
+# ============================================
+# databases:
+#   - name: ai-stack-hub-db
+#     plan: free
+#     region: oregon
