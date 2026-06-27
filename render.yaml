@@ -9,7 +9,7 @@ services:
     region: oregon
     plan: free
     buildCommand: |
-      npm install
+      npm install --include=dev
       npx prisma generate
       npm run build
       npx prisma migrate deploy
@@ -44,10 +44,9 @@ services:
         value: "https://ai-tools.vercel.app,https://ai-tools-admin.vercel.app"
 
 # ============================================
-# 可选: 使用 Render 托管 PostgreSQL
-# 取消下面注释即可自动创建数据库实例
+# Render 托管 PostgreSQL（自动注入 DATABASE_URL）
 # ============================================
-# databases:
-#   - name: ai-stack-hub-db
-#     plan: free
-#     region: oregon
+databases:
+  - name: ai-stack-hub-db
+    plan: free
+    region: oregon
